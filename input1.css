@@ -1,0 +1,78 @@
+/* 下面等价于: .polygon {border: 3px solid #FFFF00; fill: 1 solid #00FFFF;} */
+.polygon   {
+    /* 设置多边形外轮廓线样式: border */
+    border-width: 3px; /* 仅支持 px (像素点) 和 pt (1/72 英寸) 单位 */
+    border-style: solid;
+    border-color: #FFFF00;
+
+    /* 设置多边形内填充样式: fill */
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
+
+.polygon readonly hidden selected grayed deleted mousein dragging updating updated {
+    border-width: 3px;
+    border-style: solid;
+    border-color: #FFFF00;
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
+
+.line highlight disabled .point selected {
+    border-width: 3px;
+    border-style: solid;
+    border-color: #FFFF00;
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
+
+*{
+    /* 设置多边形外轮廓线样式: border */
+    border-width: 3px; /* 仅支持 px (像素点) 和 pt (1/72 英寸) 单位 */
+    border-style: solid;
+    border-color: #FFFF00;
+
+    /* 设置多边形内填充样式: fill */
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
+
+#123{
+    /* 设置多边形外轮廓线样式: border */
+    border-width: 3px; /* 仅支持 px (像素点) 和 pt (1/72 英寸) 单位 */
+    border-style: solid;
+    border-color: #FFFF00;
+
+    /* 设置多边形内填充样式: fill */
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
+
+#1 #2 #4 {
+    /* 设置多边形外轮廓线样式: border */
+    border-width: 3px; /* 仅支持 px (像素点) 和 pt (1/72 英寸) 单位 */
+    border-style: solid;
+    border-color: #FFFF00;
+
+    /* 设置多边形内填充样式: fill */
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
+
+#6 #8 #* {
+    /* 设置多边形外轮廓线样式: border */
+    border-width: 3px; /* 仅支持 px (像素点) 和 pt (1/72 英寸) 单位 */
+    border-style: solid;
+    border-color: #FFFF00;
+
+    /* 设置多边形内填充样式: fill */
+    fill-opacity: 1;
+    fill-style: solid;
+    fill-color: #00FFFF;
+}
