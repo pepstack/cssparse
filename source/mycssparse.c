@@ -7,8 +7,8 @@
  * @author 350137278@qq.com
  *
  * @since 2024-10-08 23:49:15
- * @date 2024-10-09 01:48:08
- * @version 0.1.0
+ * @date 2024-10-09 18:46:20
+ * @version 0.1.2
  *
  * @note
  *  Compile:
@@ -73,7 +73,8 @@ void cssparse_file(const char *incssfile, const char *outcssfile)
 
     if (cssString && numKeys < 0) {
         numKeys = -numKeys;
-        cssOutKeys = CssKeyArrayNew(numKeys);
+        cssOutKeys = CssKeyArrayNew(numKeys + 200);
+        numKeys += 200; //??
 
         if (CssParseString(cssString, cssOutKeys, &numKeys) && numKeys > 0) {
             // 使用 cssOutKeys

@@ -25,9 +25,9 @@
  * @author mapaware@hotmail.com
  * @brief A simple css file parser
  *
- * @version 0.1.6
+ * @version 0.1.7
  * @since 2024-10-08 23:51:27
- * @date 2024-10-09 01:33:46
+ * @date 2024-10-09 18:49:15
  *
  * file: <test.css>
  *
@@ -114,39 +114,43 @@ extern "C"
 {
 #endif
 
-typedef char * CssString;
-typedef struct CssKeyField * CssKeyArray;
+typedef char* CssString;
+typedef struct CssKeyField* CssKeyArray;
 
 typedef enum {
     css_type_none = 0,
-    css_type_class = 1,    // .class
-    css_type_id = 2,       // #id
-    css_type_asterisk = 3, // *
-    css_type_key = 10,
-    css_type_value = 11
+    css_type_key = 1,
+    css_type_value = 2,
+    css_type_class = 46,    // '.' class
+    css_type_id = 35,       // '#' id
+    css_type_asterisk = 42  // '*' any
 } CssKeyType;
 
+
+// Max up to 20 Bits(Flags)
 typedef enum {
-    css_flag_none = 0,
-    css_flag_readonly,
-    css_flag_selected,
-    css_flag_grayed,
-    css_flag_hidden,
-    css_flag_deleted,
-    css_flag_dragging,
-    css_flag_mousein,
-    css_flag_updating,
-    css_flag_updated
-} CssKeyFlag;
+    css_bitflag_none = 0,
+    css_bitflag_readonly = 1,      // 只读 2^0
+    css_bitflag_hidden = 2,        // 隐藏 2^1
+    css_bitflag_hilight = 4,       // 掠过: mouse move in
+    css_bitflag_pickup = 8,        // 拾取
+    css_bitflag_dragging = 16,     // 拖动中
+    css_bitflag_deleting = 32,     // 删除中
+    css_bitflag_fault = 64,        // 错误
+    css_bitflag_flash = 128,       // 闪烁
+    css_bitflag_zoomin = 256,      // 视图窗口放大
+    css_bitflag_zoomout = 512,     // 视图窗口缩小
+    css_bitflag_panning = 1024     // 视图窗口移动
+} CssBitFlag;
 
 
 extern CssKeyArray CssKeyArrayNew(int num);
 
 extern void CssKeyArrayFree(CssKeyArray keys);
 
-extern char * CssParseString(char *cssString, CssKeyArray outKeys, int *numKeys);
+extern char* CssParseString(char* cssString, CssKeyArray outKeys, int* numKeys);
 
-extern CssString CssParseFile(FILE *cssFile, CssKeyArray outKeys, int *numKeys);
+extern CssString CssParseFile(FILE* cssFile, CssKeyArray outKeys, int* numKeys);
 
 // CssString 类型释放器, 仅仅用于释放 CssParseFile() 返回的对象
 extern void CssStringFree(CssString cssString);

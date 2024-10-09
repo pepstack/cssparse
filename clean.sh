@@ -5,10 +5,10 @@
 #
 # @author mapaware@hotmail.com
 # @copyright © 2024-2030 mapaware.top All Rights Reserved.
-# @version 1.2.11
+# @version 1.2.12
 #
 # @since 2024-10-08 23:42:33
-# @date 2024-10-09 01:50:48
+# @date 2024-10-09 02:08:34
 #
 #######################################################################
 _name_=$(basename "$0")

@@ -27,4 +27,8 @@
       <Filter>source\common</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" />
+    <None Include="input1.css" />
+  </ItemGroup>
 </Project>
