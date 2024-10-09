@@ -25,9 +25,9 @@
  * @author 350137278@qq.com
  * @brief A simple css file parser
  *
- * @version 0.0.9
+ * @version 0.0.10
  * @since     2024-10-07
- * @date 2024-10-09 23:31:26
+ * @date 2024-10-10 02:25:58
  */
 #include <stdio.h>
 #include <string.h>
@@ -36,11 +36,6 @@
 
 #include "cssparse.h"
 #include "smallregex.h"
-
-#define CSS_STRING_MAXSIZE   0xFFFFF   // 20bit: 最长 1 M 字节
-#define CSS_KEYINDEX_MAX     0xFFF     // 12bit: 最多 4095 个 Keys
-#define CSS_VALUE_MAXLEN     0xFF      // 8bit: 键值的长度最大 255 个字符
-
 
 
 #ifdef _DEBUG
@@ -56,6 +51,9 @@
             abort(); \
         } \
     } while(0)
+
+
+#define CssKeyArraySetSize(cssKeys)  (int)(((struct CssKeyField*)(cssKeys - 1))->numKeys)
 
 
 static const char* css_bitflag_array[] = {
@@ -75,13 +73,19 @@ static const char* css_bitflag_array[] = {
 
 
 struct CssKeyField {
-    unsigned int flags  : 16;  // 16 个标记位
-    unsigned int type   :  8;  // 类型
-    unsigned int length :  8;  // 名称长度
-
-    unsigned int offset : 20;  // <= 0xFFFFF
-    unsigned int keyidx : 12;  // 如果当前是 class, 这个值为定义 class 的 {key:value ...} 的索引位置;
-                               // 如果当前是 keyval, 这个值为定义索引倒序
+    union {
+        struct {
+            int32_t  SizeKeys;
+            int32_t  UsedKeys;
+        };
+        struct {
+            unsigned int flags : 16;  // 16 个标记位
+            unsigned int type : 8;    // 类型
+            unsigned int length : 8;  // 名称长度
+            unsigned int offset : 20;  // <= 0xFFFFF
+            unsigned int keyidx : 12;  // 如果当前是 class, 这个值为定义 class 的 {key:value ...} 的索引位置
+        };
+    };
 };
 
 
@@ -106,43 +110,7 @@ static int cssGetKeyBitFlag(const char* classflag, int flaglen)
 }
 
 
-static int cssKeyBitFlagToString(int keyflag, char* outbuf, size_t buflen)
-{
-    if (keyflag > 0) {
-        if (!outbuf) {
-            int outlen = 0;
-            for (int i = 0; css_bitflag_array[i] != 0; i++) {
-                int bitmask = (1 << i);
-                if (keyflag & bitmask) {
-                    outlen += (int)strlen(css_bitflag_array[i]) + 1;
-                }
-            }
-            return outlen + 1;
-        }
-        else {
-            char* bbuf = outbuf;
-            for (int i = 0; css_bitflag_array[i] != 0; i++) {
-                int bitmask = (1 << i);
-                if (keyflag & bitmask) {
-                    int len = snprintf(bbuf, buflen + outbuf - bbuf, "%s ", css_bitflag_array[i]);
-                    if (len <= 0) {
-                        printf("Error: out of memory.\n");
-                        abort();
-                    }
-                    bbuf += len;
-                }
-            }
-            *bbuf = 0;
-            return (int)(bbuf - outbuf);
-        }
-    }
-
-    *outbuf = 0;
-    return 0;
-}
-
-
-int cssParseClassFlags(const char* start, int len, int offsets[], int lengths[], int classflags[], int nsize)
+static int cssParseClassFlags(const char* start, int len, int offsets[], int lengths[], int classflags[], int nsize)
 {
     const char* p = start;
     const char* end = start + len;
@@ -300,15 +268,15 @@ static int setCssKeyField(const char* cssString, struct CssKeyField* keyField, C
 
 
 // 检查并设置索引
-// 成功返回 0
-static int CssKeyArrayCheckIndex(const CssString cssString, CssKeyArray cssKeys, int numKeys)
+// 成功返回 UsedKeys, 失败返回 0
+static int CssKeyArrayBuild(const char* cssString, CssKeyArray cssKeys, int numKeys)
 {
     struct CssKeyField* NotKey = cssKeys + numKeys;
     struct CssKeyField* start = cssKeys;
     struct CssKeyField* offkey = start;
 
-    if (numKeys < 2 || !cssKeyTypeIsClass(offkey->type)) {
-        return 1;
+    if (numKeys < 2 || ! cssKeyTypeIsClass(offkey->type)) {
+        return 0;
     }
 
     while (++offkey != NotKey) {
@@ -326,38 +294,56 @@ static int CssKeyArrayCheckIndex(const CssString cssString, CssKeyArray cssKeys,
             }
         }
     }
-    return 0;
+
+    ((struct CssKeyField*)(cssKeys - 1))->UsedKeys = numKeys;
+    return numKeys;
 }
 
 
 CssKeyArray CssKeyArrayNew(int num)
 {
-    CssKeyArray keys = (CssKeyArray)malloc(sizeof(struct CssKeyField) * num);
-    if (!keys) {
+    if (num > CSS_KEYINDEX_MAX) {
+        printf("Error: too many keys.\n");
+        abort();
+    }
+    CssKeyArray keys = (CssKeyArray) calloc(num + 1, sizeof(struct CssKeyField));
+    if (! keys) {
         printf("Error: out of memory\n");
         abort();
     }
+
+    keys++->SizeKeys = num;
     return keys;
 }
 
 
 void CssKeyArrayFree(CssKeyArray keys)
 {
-    if (keys) {
+    if (keys--) {
         free(keys);
     }
 }
 
 
-void CssStringFree(CssString cssString)
+int CssKeyArrayGetSize(const CssKeyArray cssKeys)
 {
-    if (cssString) {
-        free(cssString);
+    if (cssKeys) {
+        return (int)((struct CssKeyField*)(cssKeys - 1))->SizeKeys;
     }
+    return 0;
 }
 
 
-char* CssParseString(char* cssString, CssKeyArray outKeys, int* numKeys)
+int CssKeyArrayGetUsed(const CssKeyArray cssKeys)
+{
+    if (cssKeys) {
+        return (int)((struct CssKeyField*)(cssKeys - 1))->UsedKeys;
+    }
+    return 0;
+}
+
+
+int CssParseString(char* cssString, CssKeyArray outKeys)
 {
     int p, q, len;
     char tmpChar, * markStr;
@@ -368,10 +354,12 @@ char* CssParseString(char* cssString, CssKeyArray outKeys, int* numKeys)
     char* css = cssString;
     int cssLen = (int)strnlen(cssString, CSS_STRING_MAXSIZE);
 
+    int SizeKeys = CssKeyArrayGetSize(outKeys);
+
     if (cssLen == CSS_STRING_MAXSIZE) {
-        printf("Error: cssString has too many chars\n");
-        // 错误返回空, numKeys 保存错误码
-        *numKeys = 1;
+        printf("Error: cssString has too many chars.\n");
+
+        // 返回 0 表示错误
         return 0;
     }
 
@@ -390,199 +378,232 @@ char* CssParseString(char* cssString, CssKeyArray outKeys, int* numKeys)
 
     // 用空格替换注释: "/* ... */"
     struct small_regex* recomment = regex_compile("/\\*.*?\\*/");
-    {
-        css = cssString;
-        while (*css) {
-            p = regex_matchp(recomment, css);
-            if (p < 0) {
-                break;
-            }
-            start = css + p;
-            next = strstr(start, "*/") + 2;
-            len = (unsigned int)(next - start);
-
-            while (len-- > 0) {
-                *start++ = 32;
-            }
-            css = next;
+    css = cssString;
+    while (*css) {
+        p = regex_matchp(recomment, css);
+        if (p < 0) {
+            break;
         }
+        start = css + p;
+        next = strstr(start, "*/") + 2;
+        len = (unsigned int)(next - start);
+
+        while (len-- > 0) {
+            *start++ = 32;
+        }
+        css = next;
     }
     regex_free(recomment);
 
     // 查找每个属性集: "{ key: value; ... }"
     struct small_regex* reclass = regex_compile("{.*?}");
     struct small_regex* rekey = regex_compile(":.*?;");
-    {
-        css = cssString;
-        while (*css) {
-            p = regex_matchp(reclass, css);
-            if (p < 0) {
+
+    css = cssString;
+    while (*css) {
+        p = regex_matchp(reclass, css);
+        if (p < 0) {
+            break;
+        }
+
+        start = css + p;
+        DEBUG_ASSERT(*start == '{')
+
+        next = strchr(start, '}') + 1;
+        len = (unsigned int)(next - start);
+
+        // 获取选择器名
+        CssKeyType keytype = css_type_none;
+        begin = css;
+        while (begin < start) {
+            // 选择器名只处理 3 种情况:
+            if (cssKeyTypeIsClass(*begin)) {
+                keytype = (CssKeyType) *begin;
                 break;
             }
+            begin++;
+            p--;
+        }
 
-            start = css + p;
-            DEBUG_ASSERT(*start == '{')
+        if (p > 0) {
+            // 如果发现选择器
+            keys += setCssKeyField(cssString, ((outKeys && keys < SizeKeys) ? &outKeys[keys] : 0),
+                        keytype, begin, p);
+            CssCheckNumKeys(keys);
 
-            next = strchr(start, '}') + 1;
-            len = (unsigned int)(next - start);
+            markStr = start + len - 1;
+            DEBUG_ASSERT(*markStr == '}')
+            * markStr = ';';
+            tmpChar = *next; *next = '\0';
 
-            // 获取选择器名
-            CssKeyType keytype = css_type_none;
-            begin = css;
-            while (begin < start) {
-                // 选择器名只处理 3 种情况:
-                if (cssKeyTypeIsClass(*begin)) {
-                    keytype = (CssKeyType) *begin;
+            start++;
+            while (start < next) {
+                // 查找属性: key : value ;
+                q = regex_matchp(rekey, start);
+                if (q < 0) {
                     break;
                 }
-                begin++;
-                p--;
-            }
 
-            if (p > 0) {
-                // 如果发现选择器
-                if (outKeys && keys < *numKeys) {
-                    keys += setCssKeyField(cssString, &outKeys[keys], keytype, begin, p);
-                }
-                else {
-                    keys += setCssKeyField(cssString, 0, keytype, begin, p);
-                }
+                begin = start + q;
+                end = strchr(begin, ';') + 1;
+                len = (unsigned int)(end - begin);
+
+                DEBUG_ASSERT(*begin == ':')
+                DEBUG_ASSERT(begin[len - 1] == ';')
+
+                // set key
+                keys += setCssKeyField(cssString, ((outKeys && keys < SizeKeys) ? &outKeys[keys] : 0),
+                            css_type_key, start, q);
                 CssCheckNumKeys(keys);
 
-                markStr = start + len - 1;
-                DEBUG_ASSERT(*markStr == '}')
-                * markStr = ';';
-                tmpChar = *next; *next = '\0';
+                // set value
+                keys += setCssKeyField(cssString, ((outKeys && keys < SizeKeys) ? &outKeys[keys] : 0),
+                            css_type_value, begin, len);
+                CssCheckNumKeys(keys);
 
-                start++;
-                while (start < next) {
-                    // 查找属性: key : value ;
-                    q = regex_matchp(rekey, start);
-                    if (q < 0) {
-                        break;
-                    }
-
-                    begin = start + q;
-                    end = strchr(begin, ';') + 1;
-                    len = (unsigned int)(end - begin);
-
-                    DEBUG_ASSERT(*begin == ':')
-                    DEBUG_ASSERT(begin[len - 1] == ';')
-
-                    // set key
-                    if (outKeys && keys < *numKeys) {
-                        keys += setCssKeyField(cssString, &outKeys[keys], css_type_key, start, q);
-                    }
-                    else {
-                        keys += setCssKeyField(cssString, 0, css_type_key, start, q);
-                    }
-                    CssCheckNumKeys(keys);
-
-                    // set value
-                    if (outKeys && keys < *numKeys) {
-                        keys += setCssKeyField(cssString, &outKeys[keys], css_type_value, begin, len);
-                    }
-                    else {
-                        keys += setCssKeyField(cssString, 0, css_type_value, begin, len);
-                    }
-                    CssCheckNumKeys(keys);
-
-                    start = end;
-                }
-
-                DEBUG_ASSERT(*markStr == ';')
-                * markStr = '}';
-
-                DEBUG_ASSERT(*next == '\0')
-                * next = tmpChar;
+                start = end;
             }
 
-            // go to next braces: {}
-            css = next;
+            DEBUG_ASSERT(*markStr == ';')
+            * markStr = '}';
+
+            DEBUG_ASSERT(*next == '\0')
+            * next = tmpChar;
         }
+
+        // go to next braces: {}
+        css = next;
     }
     regex_free(rekey);
     regex_free(reclass);
 
-    // 用户必须判断返回的 keys 不能 > 输入的 numKeys
-    if (keys > *numKeys) {
+    // 用户必须判断返回的 keys > 0
+    if (keys > SizeKeys) {
         // 负值表示输入的空间不够, 其绝对值为需要的空间大小
-        *numKeys = -keys;
-        return cssString;
+        return -keys;
     }
 
-    *numKeys = CssKeyArrayCheckIndex(cssString, outKeys, keys);
-    if (*numKeys) {
-        // 失败返回 NULL, 同时 *numKeys 设置错误码
-        printf("Error: CssKeyArrayCheckIndex() error#%d\n", *numKeys);
+    if (! CssKeyArrayBuild(cssString, outKeys, keys)) {
+        // 失败返回 0
+        printf("Error: CssKeyArrayBuild() failed.\n");
         return 0;
     }
 
-    // 成功返回指针, 同时保存 numKeys 保存 Keys 数目
-    *numKeys = keys;
-    return cssString;
+    // 成功返回保存 Keys 数目
+    return CssKeyArrayGetUsed(outKeys);
 }
 
 
-CssString CssParseFile(FILE* cssFile, CssKeyArray outKeys, int* numKeys)
-{
-    rewind(cssFile);
-    fseek(cssFile, 0, SEEK_END);
-    int bsize = (int)ftell(cssFile);
-    rewind(cssFile);
-
-    if (bsize >= 0x03FFFF) {
-        printf("Error: css file is too big\n");
-        return 0;
-    }
-
-    char* cssString = (char*)malloc(bsize + sizeof(char));
-    fread(cssString, sizeof(char), bsize, cssFile);
-    cssString[bsize] = '\0';
-
-    char* cssOut = CssParseString(cssString, outKeys, numKeys);
-    if (!cssOut) {
-        // 解析发生错误, 释放内存
-        CssStringFree(cssString);
-    }
-    // 如果返回非空, 则用户使用完负责释放空间: CssStringFree(cssOut)
-    return cssOut;
-}
-
-
-void CssKeyArrayPrint(const CssString cssString, const CssKeyArray cssKeys, int numKeys, FILE* fpout)
+void CssKeyArrayPrint(const char *cssString, const CssKeyArray cssKeys, FILE* fpout)
 {
     struct CssKeyField* cssKey, *pair;
     char bitflags[4096];
 
     int nk = 0;
 
-    while (nk < numKeys - 1) {
-        cssKey = &cssKeys[nk++];
+    int numKeys = CssKeyArrayGetUsed(cssKeys);
 
-        if (cssKeyTypeIsClass(cssKey->type)) {
-            int blen = cssKeyBitFlagToString(cssKey->flags, bitflags, sizeof(bitflags) - 1);
+    while (nk < numKeys - 1) {
+        cssKey = CssKeyArrayGetNode(cssKeys, nk++);
+
+        if (cssKeyTypeIsClass(CssKeyGetType(cssKey))) {
+            int blen = CssKeyFlagToString(CssKeyGetFlag(cssKey), bitflags, sizeof(bitflags) - 1);
 
             int keyidx = cssKey->keyidx;
 
-            fprintf(fpout, "%.*s %.*s{\n", (int)cssKey->length, &cssString[cssKey->offset], blen, bitflags);
+            int offset = 0;
+            int length = CssKeyOffsetLength(cssKey, &offset);
+
+            fprintf(fpout, "%.*s %.*s{\n", length, &cssString[offset], blen, bitflags);
 
             while (keyidx < numKeys) {
-                if (cssKeyTypeIsClass(cssKeys[keyidx].type)) {
+                pair = CssKeyArrayGetNode(cssKeys, keyidx++);
+                if (CssKeyTypeIsClass(pair)) {
                     break;
                 }
-                pair = &cssKeys[keyidx++];
 
-                if (pair->type == css_type_key) {
-                    fprintf(fpout, "  %.*s:", (int)pair->length, &cssString[pair->offset]);
+                length = CssKeyOffsetLength(pair, &offset);
+                if (CssKeyGetType(pair) == css_type_key) {
+                    fprintf(fpout, "  %.*s:", length, &cssString[offset]);
                 }
                 else {
-                    DEBUG_ASSERT(pair->type == css_type_value)
-                    fprintf(fpout, " %.*s;\n", (int)pair->length, &cssString[pair->offset]);
+                    DEBUG_ASSERT(CssKeyGetType(pair) == css_type_value)
+                    fprintf(fpout, " %.*s;\n", length, &cssString[offset]);
                 }
             }
 
             fprintf(fpout, "}\n");
         }
     }
+}
+
+
+const CssKeyArrayNode CssKeyArrayGetNode(const CssKeyArray cssKeys, int index)
+{
+    int numKeys = CssKeyArrayGetUsed(cssKeys);
+    if (index < numKeys) {
+        return (CssKeyArrayNode)(cssKeys + index);
+    }
+    return 0;
+}
+
+
+CssKeyType CssKeyGetType(const CssKeyArrayNode cssKey)
+{
+    return cssKey->type;
+}
+
+
+int CssKeyGetFlag(const CssKeyArrayNode cssKey)
+{
+    return (int)(cssKey->flags);
+}
+
+
+int CssKeyOffsetLength(const CssKeyArrayNode cssKeyNode, int *bOffset)
+{
+    *bOffset = (int)cssKeyNode->offset;
+    return (int)cssKeyNode->length;
+}
+
+
+int CssKeyTypeIsClass(const CssKeyArrayNode cssKeyNode)
+{
+    return cssKeyTypeIsClass(cssKeyNode->type);
+}
+
+
+int CssKeyFlagToString(int keyflag, char* outbuf, size_t buflen)
+{
+    if (keyflag > 0) {
+        if (!outbuf) {
+            int outlen = 0;
+            for (int i = 0; css_bitflag_array[i] != 0; i++) {
+                int bitmask = (1 << i);
+                if (keyflag & bitmask) {
+                    outlen += (int)strlen(css_bitflag_array[i]) + 1;
+                }
+            }
+            return outlen + 1;
+        }
+        else {
+            char* bbuf = outbuf;
+            for (int i = 0; css_bitflag_array[i] != 0; i++) {
+                int bitmask = (1 << i);
+                if (keyflag & bitmask) {
+                    int len = snprintf(bbuf, buflen + outbuf - bbuf, "%s ", css_bitflag_array[i]);
+                    if (len <= 0) {
+                        printf("Error: out of memory.\n");
+                        abort();
+                    }
+                    bbuf += len;
+                }
+            }
+            *bbuf = 0;
+            return (int)(bbuf - outbuf);
+        }
+    }
+
+    *outbuf = 0;
+    return 0;
 }

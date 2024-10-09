@@ -25,86 +25,9 @@
  * @author mapaware@hotmail.com
  * @brief A simple css file parser
  *
- * @version 0.1.8
+ * @version 0.1.9
  * @since 2024-10-08 23:51:27
- * @date 2024-10-09 22:33:09
- *
- * file: <test.css>
- *
-    .polygon {
-        border-width: 3px;
-        border-style: solid;
-        border-color: #FFFF00;
-        fill-opacity: 1;
-        fill-style: solid;
-        fill-color: #00FFFF;
-    }
-
-    .polygon selected {
-        border-width: 3px;
-        border-style: solid;
-        border-color: #FF0F0F;
-        fill-opacity: 1;
-        fill-style: solid;
-        fill-color: #00FFFF;
-    }
-
-    * {
-        border-width: 4px;
-        border-style: dash;
-        border-color: #00FFF00;
-        fill-opacity: 0;
-        fill-style: solid;
-        fill-color: #0011FF;
-    }
-
-    #123 {
-        border-width: 5px;
-        border-style: none;
-        border-color: #AAFF00;
-        fill-opacity: 10;
-        fill-style: solid;
-        fill-color: #00CCFF;
-    }
-
- * Show how to parse css file:
-
-void parse_print_cssfile(const char *cssFile)
-{
-    CssString cssString = 0;
-    int numKeys = 0;
-    CssKeyArray cssOutKeys = 0;
-
-    FILE * fp = fopen(cssFile, "r");
-    if (! fp) {
-        printf("Warn: invalid css file: %s\n", cssFile);
-        return;
-    }
-
-    // 测试空间以分配内存
-    cssString = CssParseFile(fp, 0, &numKeys);
-    fclose(fp);
-
-    if (cssString && numKeys < 0) {
-        numKeys = -numKeys;
-        cssOutKeys = CssKeyArrayNew(numKeys);
-
-        if (CssParseString(cssString, cssOutKeys, &numKeys) && numKeys > 0) {
-            // 使用 cssOutKeys
-            CssPrintKeys(cssString, cssOutKeys, numKeys);
-
-            // TODO:
-            // ...
-
-
-        }
-
-        CssKeyArrayFree(cssOutKeys);
-    }
-    CssStringFree(cssString);
-}
-
-Enjoy it!
+ * @date 2024-10-10 02:26:50
  */
 #ifndef CSS_PARSE_H__
 #define CSS_PARSE_H__
@@ -114,8 +37,14 @@ extern "C"
 {
 #endif
 
-typedef char* CssString;
-typedef struct CssKeyField* CssKeyArray;
+
+typedef struct CssKeyField  *CssKeyArray, *CssKeyArrayNode;
+
+
+#define CSS_STRING_MAXSIZE   0xFFFFF   // 20bit: 最长 1 M 字节
+#define CSS_KEYINDEX_MAX     0xFFF     // 12bit: 最多 4095 个 Keys
+#define CSS_VALUE_MAXLEN     0xFF      // 8bit: 键值的长度最大 255 个字符
+
 
 typedef enum {
     css_type_none = 0,
@@ -145,23 +74,22 @@ typedef enum {
 
 
 extern CssKeyArray CssKeyArrayNew(int num);
-
 extern void CssKeyArrayFree(CssKeyArray keys);
 
-extern char* CssParseString(char* cssString, CssKeyArray outKeys, int* numKeys);
+extern int CssParseString(char* cssString, CssKeyArray outKeys);
 
-extern CssString CssParseFile(FILE* cssFile, CssKeyArray outKeys, int* numKeys);
+extern int CssKeyArrayGetSize(const CssKeyArray cssKeys);
+extern int CssKeyArrayGetUsed(const CssKeyArray cssKeys);
 
-// CssString 类型释放器, 仅仅用于释放 CssParseFile() 返回的对象
-extern void CssStringFree(CssString cssString);
+extern const CssKeyArrayNode CssKeyArrayGetNode(const CssKeyArray cssKeys, int index);
+extern CssKeyType CssKeyGetType(const CssKeyArrayNode cssKey);
+extern int CssKeyGetFlag(const CssKeyArrayNode cssKey);
+extern int CssKeyOffsetLength(const CssKeyArrayNode cssKeyNode, int* bOffset);
+extern int CssKeyTypeIsClass(const CssKeyArrayNode cssKeyNode);
+extern int CssKeyFlagToString(int keyflag, char* outbuf, size_t buflen);
 
-// 方法展示了如何使用 cssparse 解析输出 css
-///extern int CssKeysFindFirst(const CssString cssString, const CssKeyArray cssKeys, int numKeys);
-
-extern void CssPrintKeys(const CssString cssString, const CssKeyArray cssKeys, int numKeys);
-
-extern void CssKeyArrayPrint(const CssString cssString, const CssKeyArray cssKeys, int numKeys, FILE *fpout);
-
+// 展示了如何使用 cssparse 解析输出 css
+extern void CssKeyArrayPrint(const char *cssString, const CssKeyArray cssKeys, FILE *fpout);
 
 #ifdef __cplusplus
 }
