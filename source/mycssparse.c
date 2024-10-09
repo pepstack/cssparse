@@ -7,8 +7,8 @@
  * @author 350137278@qq.com
  *
  * @since 2024-10-08 23:49:15
- * @date 2024-10-09 18:46:20
- * @version 0.1.2
+ * @date 2024-10-09 23:30:52
+ * @version 0.1.3
  *
  * @note
  *  Compile:
@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <common/cssparse.h>
 
@@ -53,7 +54,14 @@ void print_usage(const char *appfile)
 }
 
 
-void cssparse_file(const char *incssfile, const char *outcssfile)
+int file_exists(const char* filename)
+{
+    struct stat buffer;
+    return (stat(filename, &buffer) == 0);
+}
+
+
+void cssparse_file(const char *incssfile, FILE * outcssfile)
 {
     printf("parse css file: %s\n", incssfile);
 
@@ -78,8 +86,7 @@ void cssparse_file(const char *incssfile, const char *outcssfile)
 
         if (CssParseString(cssString, cssOutKeys, &numKeys) && numKeys > 0) {
             // 使用 cssOutKeys
-            CssPrintKeys(cssString, cssOutKeys, numKeys);
-
+            CssKeyArrayPrint(cssString, cssOutKeys, numKeys, (outcssfile? outcssfile : stdout));
             // TODO:
             // ...
         }
@@ -90,14 +97,14 @@ void cssparse_file(const char *incssfile, const char *outcssfile)
 }
 
 
-void cssparse_string(const char *incssstring, const char *outcssfile)
+void cssparse_string(const char *incssstring, FILE * outcssfile)
 {
     printf("parse css string:\n--------\n%s\n--------\n", incssstring);
 
     int csslen = (int) strnlen(incssstring, 0xffff);
     if (csslen == 0xffff) {
         printf("Error: Input css string is too long.\n");
-        return;
+        exit(1);
     }
 
     char *cssString = (char *) malloc((csslen + 1) * sizeof(char));
@@ -118,7 +125,8 @@ void cssparse_string(const char *incssstring, const char *outcssfile)
 
         if (CssParseString(cssString, cssOutKeys, &numKeys) && numKeys > 0) {
             // 使用 cssOutKeys
-            CssPrintKeys(cssString, cssOutKeys, numKeys);
+
+            CssKeyArrayPrint(cssString, cssOutKeys, numKeys, (outcssfile ? outcssfile : stdout));
 
             // TODO:
             // ...
@@ -138,11 +146,30 @@ int main(int argc, char * argv[])
         return 1;
     }
 
-    if (strstr(argv[1], "file://") == argv[1]) {
-        cssparse_file(argv[1] + 7, (argc > 2? argv[2] : 0));
-    } else {
-        cssparse_string(argv[1], (argc > 2? argv[2] : 0));
+    FILE* fpoutcss = 0;
+
+    if (argc == 3 && strstr(argv[2], "file://") == argv[2]) {
+        const char* outcssfile = argv[2] + 7;
+
+        if (file_exists(outcssfile)) {
+            printf("Error: output css file existed: %s\n", outcssfile);
+            exit(1);
+        }
+        fpoutcss = fopen(outcssfile, "w+");
+        if (!fpoutcss) {
+            printf("Error: open file failed: %s\n", outcssfile);
+            exit(1);
+        }
     }
 
+    if (strstr(argv[1], "file://") == argv[1]) {
+        cssparse_file(argv[1] + 7, fpoutcss);
+    } else {
+        cssparse_string(argv[1], fpoutcss);
+    }
+
+    if (fpoutcss) {
+        fclose(fpoutcss);
+    }
     return 0;
 }

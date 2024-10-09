@@ -25,9 +25,9 @@
  * @author mapaware@hotmail.com
  * @brief A simple css file parser
  *
- * @version 0.1.7
+ * @version 0.1.8
  * @since 2024-10-08 23:51:27
- * @date 2024-10-09 18:49:15
+ * @date 2024-10-09 22:33:09
  *
  * file: <test.css>
  *
@@ -127,7 +127,7 @@ typedef enum {
 } CssKeyType;
 
 
-// Max up to 20 Bits(Flags)
+// Max up to 16 Bits(Flags)
 typedef enum {
     css_bitflag_none = 0,
     css_bitflag_readonly = 1,      // 只读 2^0
@@ -159,6 +159,9 @@ extern void CssStringFree(CssString cssString);
 ///extern int CssKeysFindFirst(const CssString cssString, const CssKeyArray cssKeys, int numKeys);
 
 extern void CssPrintKeys(const CssString cssString, const CssKeyArray cssKeys, int numKeys);
+
+extern void CssKeyArrayPrint(const CssString cssString, const CssKeyArray cssKeys, int numKeys, FILE *fpout);
+
 
 #ifdef __cplusplus
 }
