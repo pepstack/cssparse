@@ -7,8 +7,8 @@
  * @author 350137278@qq.com
  *
  * @since 2024-10-08 23:49:15
- * @date 2024-10-10 01:45:03
- * @version 0.1.4
+ * @date 2024-10-10 11:15:05
+ * @version 0.1.5
  *
  * @note
  *  Compile:
@@ -98,7 +98,7 @@ void demo_cssparse_file(const char* csspathfile, FILE* cssFileOut)
     rewind(cssFileIn);
     fseek(cssFileIn, 0, SEEK_END);
     int bsize = (int)ftell(cssFileIn);
-    if (bsize >= CSS_STRING_MAXSIZE) {
+    if (bsize >= CSS_STRING_BSIZE_MAX_1048576) {
         printf("Error: css file is too big.\n");
         fclose(cssFileIn);
         exit(1);

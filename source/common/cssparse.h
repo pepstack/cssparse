@@ -25,9 +25,9 @@
  * @author mapaware@hotmail.com
  * @brief A simple css file parser
  *
- * @version 0.1.9
+ * @version 0.1.10
  * @since 2024-10-08 23:51:27
- * @date 2024-10-10 02:26:50
+ * @date 2024-10-10 10:45:40
  */
 #ifndef CSS_PARSE_H__
 #define CSS_PARSE_H__
@@ -40,10 +40,19 @@ extern "C"
 
 typedef struct CssKeyField  *CssKeyArray, *CssKeyArrayNode;
 
-
-#define CSS_STRING_MAXSIZE   0xFFFFF   // 20bit: 最长 1 M 字节
-#define CSS_KEYINDEX_MAX     0xFFF     // 12bit: 最多 4095 个 Keys
-#define CSS_VALUE_MAXLEN     0xFF      // 8bit: 键值的长度最大 255 个字符
+// NOTE:
+//   Input CSS String's Max Length  < 1024*1024 bytes
+//   Max Key Index = 4095
+//   Key's or Value's Max Length = 255 bytes
+// For Example:
+//   char cssString[1024*1024];
+//   int keyIndex[4096];
+//   char keyValue[256];
+// NEVER CHANGE BELOW DEFINITIONS!
+#define CSS_STRING_BSIZE_MAX_1048576     0x100000   // 20bit: 最长 1048575 (1M - 1) 字节: (1024*1024 - 1)
+#define CSS_KEY_FLAGS_INVALID_65536      0x10000    // 16bit: 最大 65535
+#define CSS_KEYINDEX_INVALID_4096        0x1000     // 12bit: 最多 4096 个 Keys, 索引=[0 ... 4095 (0xFFF)]
+#define CSS_VALUELEN_INVALID_256         0x100      // 8bit:  键值的长度最大 255 个字符: CSS_VALUELEN_INVALID - 1
 
 
 typedef enum {
@@ -88,7 +97,10 @@ extern int CssKeyOffsetLength(const CssKeyArrayNode cssKeyNode, int* bOffset);
 extern int CssKeyTypeIsClass(const CssKeyArrayNode cssKeyNode);
 extern int CssKeyFlagToString(int keyflag, char* outbuf, size_t buflen);
 
-// 展示了如何使用 cssparse 解析输出 css
+// Only for class node, to get it's {} node index or else returns: -1
+extern int CssClassGetKeyIndex(const CssKeyArrayNode cssClassKey);
+
+// 完全使用头文件 API, 展示了如何使用 cssparse 解析和输出 CSS
 extern void CssKeyArrayPrint(const char *cssString, const CssKeyArray cssKeys, FILE *fpout);
 
 #ifdef __cplusplus

@@ -3,7 +3,9 @@
 
 A tiny tool to parse simple css file.
 
-2024-10-08
+https://github.com/pepstack/cssparse.git
+
+2024-10-08,09,10
 
 
 Cascadia Code 为命令行和代码编辑器提供了全新的体验，并且它还支持编程连字（Programming Ligatures），就是在编写代码的时候，可以组合字符创建新的字形，这对于代码的可读性和呈现后的用户友好度都是一种很好的机制，同时这也增强了 Windows Terminal 的现代外观。
@@ -21,3 +23,22 @@ VS 内置环境变量:
 	$(TargetExt)        项目生成文件后缀名，如.exe, .lib具体取决于工程设置
 	$(TargetFileName)   项目输出文件名字。比如Game.exe, 等于 (TargetName)+(TargetExt)
 	$(ProjectExt)       工程文件后缀名，如.vcxproj
+
+### Build and test
+
+mingw:
+  
+  $ make
+
+  $ mycssparse.exe file://test.css
+
+vs2022:
+
+  cssparse/projects/msvc/mycssparse/mycssparse-vs2022.sln
+
+### Usage
+
+  Copy all '.h' and '.c' files in "cssparse/source/common/" folder to your project and use it.
+
+  See "cssparse/mycssparse.c" to learn how to use it.
+

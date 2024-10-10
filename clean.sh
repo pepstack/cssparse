@@ -5,10 +5,10 @@
 #
 # @author mapaware@hotmail.com
 # @copyright © 2024-2030 mapaware.top All Rights Reserved.
-# @version 1.2.12
+# @version 1.2.13
 #
 # @since 2024-10-08 23:42:33
-# @date 2024-10-09 02:08:34
+# @date 2024-10-10 11:29:50
 #
 #######################################################################
 _name_=$(basename "$0")
@@ -33,7 +33,7 @@ fi
 
 echo "$_name_: remove all mediate files under: ${_cdir_}"
 
-cd ${_cdir_} && rm -f *.o "./${APPNAME}" "./${APPNAME}.exe"
+cd ${_cdir_} && rm -f *.stackdump *.o "./${APPNAME}" "./${APPNAME}.exe"
 
 cd ${_cdir_} && rm -rf "./temp" "./projects/msvc/${APPNAME}/vcbuild" "./projects/msvc/${APPNAME}/.vs"
 

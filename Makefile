@@ -4,10 +4,10 @@
 #
 # @author mapaware@hotmail.com
 # @copyright © 2024-2030 mapaware.top All Rights Reserved.
-# @version 1.0.7
+# @version 1.0.8
 #
 # @since 2024-10-08 19:24:50
-# @date 2024-10-09 01:33:57
+# @date 2024-10-10 11:51:27
 #
 ################################################################
 # compiler
@@ -69,4 +69,5 @@ revise-source:
 	@echo "(Ok) revise source files done."
 
 test: all
-	$(PREFIX)/$(APPNAME).exe ".polygon { border: 3px solid #ff00ff; fill: 0.5 solid #00f0f0 }"
+	@echo "TODO"
+
