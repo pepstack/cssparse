@@ -7,8 +7,8 @@
  * @author 350137278@qq.com
  *
  * @since 2024-10-08 23:49:15
- * @date 2024-10-10 11:15:05
- * @version 0.1.5
+ * @date 2024-10-15 02:14:01
+ * @version 0.1.6
  *
  * @note
  *  Compile:
@@ -61,56 +61,45 @@ int file_exists(const char* filename)
 }
 
 
-void demo_cssparse_string(char *cssString, FILE * outcssfile)
+void demo_cssparse_string(char* cssStr, FILE* outcssfile)
 {
-    printf("parse css string:\n--------\n%s\n--------\n", cssString);
+    printf("parse css string:\n--------\n%s\n--------\n", cssStr);
 
-    int numKeys = 0;
-    CssKeyArray cssOutKeys = 0;
-
-    // 测试空间以分配内存
-    numKeys = CssParseString(cssString, 0);
-    if (numKeys < 0) {
-        cssOutKeys = CssKeyArrayNew(-numKeys);
-        if (CssParseString(cssString, cssOutKeys) > 0) {
-            // 使用 cssOutKeys
-
-            CssKeyArrayPrint(cssString, cssOutKeys, (outcssfile ? outcssfile : stdout));
-
-            // TODO:
-            // ...
-        }
-        CssKeyArrayFree(cssOutKeys);
+    CssString cssString = CssStringNew(cssStr, strlen(cssStr));
+    CssKeyArray keys = CssStringParse(cssString);
+    if (keys) {
+        CssKeyArrayPrint(keys, outcssfile);
+        CssKeyArrayFree(keys);
     }
-
-    free(cssString);
+    else {
+        CssStringFree(cssString);
+    }
 }
 
 
-void demo_cssparse_file(const char* csspathfile, FILE* cssFileOut)
+void demo_cssparse_file(const char *csspathfile, FILE *cssFileOut)
 {
-    // 必须一次读全部输入文件内容
-    FILE* cssFileIn = fopen(csspathfile, "r");
-    if (!cssFileIn) {
-        printf("Error: open file failed: %s\n", csspathfile);
-        exit(1);
-    }
-    rewind(cssFileIn);
-    fseek(cssFileIn, 0, SEEK_END);
-    int bsize = (int)ftell(cssFileIn);
-    if (bsize >= CSS_STRING_BSIZE_MAX_1048576) {
-        printf("Error: css file is too big.\n");
-        fclose(cssFileIn);
-        exit(1);
-    }
+    FILE* cssfile = fopen(csspathfile, "r");
+    if (cssfile) {
+        CssString cssString = CssStringNewFromFile(cssfile);
+        fclose(cssfile);
 
-    rewind(cssFileIn);
-    char* cssString = (char*) malloc(bsize + sizeof(char));
-    fread(cssString, sizeof(char), bsize, cssFileIn);
-    cssString[bsize] = '\0';
-    fclose(cssFileIn);
+        if (!cssString) {
+            printf("Error: CssStringNewFromFile() failed. cssfile=%s\n", csspathfile);
+            exit(1);
+        }
 
-    demo_cssparse_string(cssString, cssFileOut);
+        CssKeyArray keys = CssStringParse(cssString);
+        if (!keys) {
+            printf("Error: CssStringParse() failed\n");
+            CssStringFree(cssString);
+            exit(1);
+        }
+
+        CssKeyArrayPrint(keys, stdout);
+
+        CssKeyArrayFree(keys);
+    }
 }
 
 
@@ -140,21 +129,7 @@ int main(int argc, char * argv[])
     if (strstr(argv[1], "file://") == argv[1]) {
         demo_cssparse_file(argv[1] + 7, cssFileOut);
     } else {
-        int csslen = (int)strnlen(argv[1], 0xfff);
-        if (csslen == 0xfff) {
-            printf("Error: Input css string is too long.\n");
-            exit(1);
-        }
-        char* cssString = (char*)malloc((csslen + 1) * sizeof(char));
-        if (!cssString) {
-            printf("Error: Out of memory.\n");
-            abort();
-        }
-        memcpy(cssString, argv[1], (csslen + 1) * sizeof(char));
-
-        demo_cssparse_string(cssString, cssFileOut);
-
-        free(cssString);
+        demo_cssparse_string(argv[1], cssFileOut);
     }
 
     if (cssFileOut) {
