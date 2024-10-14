@@ -25,9 +25,9 @@
  * @brief A simple css file parser
  *
  * @author mapaware@hotmail.com
- * @version 0.0.15
+ * @version 0.0.16
  * @since 2024-10-07 23:45:12
- * @date 2024-10-15 02:05:57
+ * @date 2024-10-15 02:24:44
  */
 #include <stdio.h>
 #include <string.h>
@@ -51,9 +51,6 @@
             abort(); \
         } \
     } while(0)
-
-
-#define CssKeyArraySetSize(cssKeys)  (int)(((struct CssKeyField*)(cssKeys - 1))->numKeys)
 
 
 static const char* css_bitflag_array[] = {
@@ -82,10 +79,10 @@ struct CssKeyField {
 
 
 typedef struct CssKeyArrayData {
-    struct CssStringBuffer* cssString;
+    struct CssStringBuffer *cssString;
 
     union {
-        struct CssStringBuffer* __align_dummy;
+        struct CssStringBuffer *__align_dummy;
 
         struct {
             int32_t  UsedKeys;
@@ -97,16 +94,16 @@ typedef struct CssKeyArrayData {
 } CssKeyArrayHead;
 
 
-static CssKeyArrayHead* CssKeyArrayHeadData(CssKeyArray cssKeys)
+static CssKeyArrayHead * CssKeyArrayHeadData(CssKeyArray cssKeys)
 {
-    return (CssKeyArrayHead*)((char*)cssKeys - sizeof(struct CssKeyArrayData));
+    return (CssKeyArrayHead *) ((char*)cssKeys - sizeof(struct CssKeyArrayData));
 }
 
 
-static int CssStyleClassSplit(const char* str, int len, const char* outstrs[], int outstrslen[], int maxoutnum)
+static int CssStyleClassSplit(const char *str, int len, const char *outstrs[], int outstrslen[], int maxoutnum)
 {
     int num;
-    const char* start, * end;
+    const char *start, *end;
 
     num = 0;
     start = str;
@@ -354,8 +351,8 @@ static CssKeyArray CssCreateKeysArray(int num, CssString cssString)
     }
 
     size_t bsize = sizeof(CssKeyArrayHead) + num * sizeof(struct CssKeyField);
-    CssKeyArrayHead* data = (CssKeyArrayHead*)malloc(bsize);
-    if (!data) {
+    CssKeyArrayHead * data = (CssKeyArrayHead *) malloc(bsize);
+    if (! data) {
         printf("Error: Out of memory\n");
         abort();
     }
@@ -446,13 +443,12 @@ static int cssParseKeys(CssString cssString, CssKeyArray outKeys)
 
         if (p > 0) {
             // 如果发现选择器
-            keys += setCssKeyField(cssString->sbbuf, ((outKeys && keys < SizeKeys) ? &outKeys[keys] : 0),
-                keytype, begin, p);
+            keys += setCssKeyField(cssString->sbbuf, ((outKeys && keys < SizeKeys) ? &outKeys[keys] : 0), keytype, begin, p);
             CssCheckNumKeys(keys);
 
             markStr = start + len - 1;
-            DEBUG_ASSERT(*markStr == '}')
-                * markStr = ';';
+            DEBUG_ASSERT(*markStr == '}');
+            *markStr = ';';
             tmpChar = *next; *next = '\0';
 
             start++;
@@ -519,7 +515,7 @@ CssString CssStringNew(const char* cssStr, size_t cssStrLen)
         return 0;
     }
 
-    struct CssStringBuffer* sbuf = (struct CssStringBuffer*)malloc(sizeof(struct CssStringBuffer) + sizeof(char) * cbSize);
+    struct CssStringBuffer *sbuf = (struct CssStringBuffer *) malloc(sizeof(struct CssStringBuffer) + sizeof(char) * cbSize);
     if (!sbuf) {
         printf("Error: Out of memory.\n");
         abort();
@@ -533,8 +529,8 @@ CssString CssStringNew(const char* cssStr, size_t cssStrLen)
     }
 
     sbuf->sbbuf[cssStrLen] = '\0';
-    sbuf->sbsize = (uint32_t)cbSize;
-    sbuf->sblen = (uint32_t)cssStrLen;
+    sbuf->sbsize = (uint32_t) cbSize;
+    sbuf->sblen = (uint32_t) cssStrLen;
 
     return sbuf;
 }
@@ -575,7 +571,7 @@ void CssStringFree(CssString cssString)
 void CssKeyArrayFree(CssKeyArray cssKeys)
 {
     if (cssKeys) {
-        CssKeyArrayHead* data = CssKeyArrayHeadData(cssKeys);
+        CssKeyArrayHead *data = CssKeyArrayHeadData(cssKeys);
         CssStringFree(data->cssString);
         free(data);
     }
@@ -593,7 +589,7 @@ int CssKeyArrayGetSize(const CssKeyArray cssKeys)
 {
     if (cssKeys) {
         CssKeyArrayHead* data = CssKeyArrayHeadData(cssKeys);
-        return (int)data->SizeKeys;
+        return (int) data->SizeKeys;
     }
     return 0;
 }
@@ -744,9 +740,9 @@ void CssKeyArrayPrint(const CssKeyArray cssKeys, FILE* outfd)
                 CssKeyArrayNode valNode = CssKeyArrayGetNode(cssKeys, keyIndex++);
 
                 DEBUG_ASSERT(CssKeyGetType(keyNode) == css_type_key)
-                    DEBUG_ASSERT(CssKeyGetType(valNode) == css_type_value)
+                DEBUG_ASSERT(CssKeyGetType(valNode) == css_type_value)
 
-                    int keyoffs, valoffs;
+                int keyoffs, valoffs;
                 int keylen = CssKeyOffsetLength(keyNode, &keyoffs);
                 int vallen = CssKeyOffsetLength(valNode, &valoffs);
 
@@ -759,9 +755,9 @@ void CssKeyArrayPrint(const CssKeyArray cssKeys, FILE* outfd)
 }
 
 
-int CssKeyArrayQueryClass(const CssKeyArray cssKeys, CssKeyType classType, const char* className, int classNameLen, CssKeyArrayNode classNodes[32])
+int CssKeyArrayQueryClass(const CssKeyArray cssKeys, CssKeyType classType, const char *className, int classNameLen, CssKeyArrayNode classNodes[32])
 {
-    const char* styleNames[32];
+    const char *styleNames[32];
     int styleLens[32];
     int numstyles = CssStyleClassSplit(className, classNameLen, styleNames, styleLens, sizeof(styleLens) / sizeof(styleLens[0]));
 
